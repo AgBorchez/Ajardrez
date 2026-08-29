@@ -88,10 +88,15 @@ public class ChessBoardView extends JPanel {
     }
 
     public void render() {
+        int targetSize = 58; // Tamaño en píxeles de la pieza dentro de la casilla
+
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 char piece = boardState[r][c];
-                buttons[r][c].setText(PieceImages.getSymbol(piece));
+                
+                // Asignar icono gráfico y limpiar texto anterior
+                buttons[r][c].setText("");
+                buttons[r][c].setIcon(PieceImages.getIcon(piece, targetSize));
 
                 Color baseColor = (r + c) % 2 == 0 ? LIGHT_SQUARE : DARK_SQUARE;
                 buttons[r][c].setBackground(baseColor);

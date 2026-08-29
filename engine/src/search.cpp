@@ -20,7 +20,7 @@ int Search::minimax(Board& board, int depth, int alpha, int beta, bool is_maximi
         for (const auto& move : moves) {
             board.make_move(move);
             int eval = minimax(board, depth - 1, alpha, beta, false);
-            board.unmake_move(move);
+            board.undo_move();
 
             max_eval = std::max(max_eval, eval);
             alpha = std::max(alpha, eval);
@@ -32,7 +32,7 @@ int Search::minimax(Board& board, int depth, int alpha, int beta, bool is_maximi
         for (const auto& move : moves) {
             board.make_move(move);
             int eval = minimax(board, depth - 1, alpha, beta, true);
-            board.unmake_move(move);
+            board.undo_move();
 
             min_eval = std::min(min_eval, eval);
             beta = std::min(beta, eval);
@@ -57,7 +57,7 @@ Move Search::find_best_move(Board& board, int depth) {
     for (const auto& move : moves) {
         board.make_move(move);
         int eval = minimax(board, depth - 1, alpha, beta, !is_maximizing);
-        board.unmake_move(move);
+        board.undo_move();
 
         if (is_maximizing) {
             if (eval > best_val) {

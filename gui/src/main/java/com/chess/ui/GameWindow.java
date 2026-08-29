@@ -36,9 +36,16 @@ public class GameWindow extends JFrame {
 
     private JPanel createToolbar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+
         JButton btnNew = new JButton("Nueva Partida");
         btnNew.addActionListener(e -> resetGame());
+
+        btnUndo = new JButton("Deshacer");
+        btnUndo.setEnabled(false); 
+        btnUndo.addActionListener(e -> handleUndo());
+
         bar.add(btnNew);
+        bar.add(btnUndo);
         return bar;
     }
 
@@ -113,6 +120,7 @@ public class GameWindow extends JFrame {
             boardView.setPieceAt(from.y, from.x, ' ');
             boardView.render();
 
+            updateButtonStates();
             checkGameEnd();
 
             if (isPlayer) {
@@ -175,6 +183,40 @@ public class GameWindow extends JFrame {
             isAiTurn = false;
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void handleUndo(){
+
+        if (isAiTurn || history.getMoveHistory().isEmpty()) return;
+
+        try {
+            int stepsToUndo = (history.getMoveHistory().size() >= 2) ? 2 : 1;
+
+            for (int i = 0; i < stepsToUndo; i++){
+
+                boolean engineOk = bridge.undoMove();
+
+                if (engineOk) {
+                    history.undo();
+                }
+            }
+
+            boardView.render();
+
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private JButton btnUndo;
+
+    
+
+    private void updateButtonStates() {
+        if (btnUndo != null) {
+            btnUndo.setEnabled(!history.getMoveHistory().isEmpty() && !isAiTurn);
         }
     }
 }

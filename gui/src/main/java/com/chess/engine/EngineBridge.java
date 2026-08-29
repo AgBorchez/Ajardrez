@@ -30,6 +30,11 @@ public class EngineBridge {
         process.sendCommand("MAKE_MOVE " + move);
     }
 
+    public boolean undoMove() throws IOException {
+        String response = process.sendCommand("UNDO_MOVE");
+        return "OK_UNDO".equals(response);
+    }
+
     public String calculateAiMove() throws IOException {
         String res = process.sendCommand("CALCULATE_AI");
         if (res.startsWith("BESTMOVE")) {

@@ -68,6 +68,16 @@ std::string Protocol::process_command(const std::string& line) {
         }
         return "ERROR_MOVE";
     }
+    else if (command == "UNDO_MOVE")
+    {
+        if (board.undo_move())
+        {
+            return "OK_UNDO";
+        }
+        return "ERR_UNDO";
+        
+    }
+    
     else if (command == "CALCULATE_AI") {
         int depth = 4;
         Move best = Search::find_best_move(board, depth);

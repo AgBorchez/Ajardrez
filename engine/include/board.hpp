@@ -2,11 +2,10 @@
 
 #include "types.hpp"
 
-struct CastlingRights {
-    bool white_kingside = true;
-    bool white_queenside = true;
-    bool black_kingside = true;
-    bool black_queenside = true;
+struct HistoryEntry
+{
+    Move move;
+    CastlingRights castling;
 };
 
 class Board {
@@ -14,7 +13,8 @@ private:
     Piece squares[64];
     Color current_turn;
     CastlingRights castling;
-    CastlingRights castling_history[512]; // Stack simple para unmake_move
+    HistoryEntry history[512];
+     
     int history_index = 0;
 
 public:
@@ -31,7 +31,7 @@ public:
     const CastlingRights& get_castling() const { return castling; }
 
     void make_move(const Move& move);
-    void unmake_move(const Move& move);
+    bool undo_move();
 
     int find_king_square(Color color) const;
 };

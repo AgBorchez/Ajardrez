@@ -42,6 +42,13 @@ struct Move {
         : from(f), to(t), captured(cap), type(mt), promotion_piece(promo) {}
 };
 
+struct CastlingRights {
+    bool white_kingside = true;
+    bool white_queenside = true;
+    bool black_kingside = true;
+    bool black_queenside = true;
+};
+
 namespace SquareUtils {
     inline bool is_valid(int sq) { return sq >= 0 && sq < 64; }
     inline int row(int sq) { return sq / 8; }
