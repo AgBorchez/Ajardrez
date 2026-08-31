@@ -1,3 +1,0 @@
-/home/borchez/Proyectos/Ajardrez/engine/build/CMakeFiles/chess_engine.dir
-/home/borchez/Proyectos/Ajardrez/engine/build/CMakeFiles/edit_cache.dir
-/home/borchez/Proyectos/Ajardrez/engine/build/CMakeFiles/rebuild_cache.dir
