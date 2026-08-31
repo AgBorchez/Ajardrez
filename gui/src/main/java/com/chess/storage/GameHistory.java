@@ -35,4 +35,13 @@ public class GameHistory {
         redoHistory.clear();
     }
 
+    public java.util.List<String> getMovesChronological() {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        java.util.Iterator<String> it = moveHistory.descendingIterator();
+        while (it.hasNext()) {
+            list.add(it.next());
+        }
+        return list;
+    }
+
 }

@@ -3,14 +3,17 @@
 #include "board.hpp"
 #include <string>
 
-class Protocol {
-private:
-    Board board;
+namespace Ajardrez {
+    class Protocol {
+    private:
+        Board board;
 
-public:
-    Protocol();
+    public:
+        Protocol();
 
-    std::string process_command(const std::string& line);
+        std::string process_command(const std::string& line);
 
-    void run();
-};
+        void run();
+    };
+        
+}

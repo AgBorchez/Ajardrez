@@ -3,53 +3,55 @@
 #include <cstdint>
 #include <string>
 
-enum class Color : int8_t { 
-    NONE = 0, 
-    WHITE = 1, 
-    BLACK = -1 
-};
+namespace Ajardrez {
 
-enum class PieceType : int8_t { 
-    NONE = 0, 
-    PAWN, 
-    KNIGHT, 
-    BISHOP, 
-    ROOK, 
-    QUEEN, 
-    KING 
-};
+    enum class Color : int8_t { 
+        NONE = 0, 
+        WHITE = 1, 
+        BLACK = -1 
+    };
 
-struct Piece {
-    PieceType type = PieceType::NONE;
-    Color color = Color::NONE;
-};
+    enum class PieceType : int8_t { 
+        NONE = 0, 
+        PAWN, 
+        KNIGHT, 
+        BISHOP, 
+        ROOK, 
+        QUEEN, 
+        KING 
+    };
 
-enum class MoveType : uint8_t {
-    NORMAL = 0,
-    PROMOTION,
-    CASTLE_KINGSIDE,
-    CASTLE_QUEENSIDE
-};
+    struct Piece {
+        PieceType type = PieceType::NONE;
+        Color color = Color::NONE;
+    };
 
-struct Move {
-    int from;
-    int to;
-    Piece captured;
-    MoveType type;
-    PieceType promotion_piece;
+    enum class MoveType : uint8_t {
+        NORMAL = 0,
+        PROMOTION,
+        CASTLE_KINGSIDE,
+        CASTLE_QUEENSIDE
+    };
 
-    Move(int f = 0, int t = 0, Piece cap = {}, MoveType mt = MoveType::NORMAL, PieceType promo = PieceType::NONE) 
-        : from(f), to(t), captured(cap), type(mt), promotion_piece(promo) {}
-};
 
-struct CastlingRights {
-    bool white_kingside = true;
-    bool white_queenside = true;
-    bool black_kingside = true;
-    bool black_queenside = true;
-};
+    struct Move {
+        int from;
+        int to;
+        Piece captured;
+        MoveType type;
+        PieceType promotion_piece;
 
-namespace SquareUtils {
+        Move(int f = 0, int t = 0, Piece cap = {}, MoveType mt = MoveType::NORMAL, PieceType promo = PieceType::NONE) 
+            : from(f), to(t), captured(cap), type(mt), promotion_piece(promo) {}
+    };
+
+    struct CastlingRights {
+        bool white_kingside = true;
+        bool white_queenside = true;
+        bool black_kingside = true;
+        bool black_queenside = true;
+    };
+
     inline bool is_valid(int sq) { return sq >= 0 && sq < 64; }
     inline int row(int sq) { return sq / 8; }
     inline int col(int sq) { return sq % 8; }
@@ -66,4 +68,5 @@ namespace SquareUtils {
         char r = '1' + (sq / 8);
         return {c, r};
     }
+    
 }

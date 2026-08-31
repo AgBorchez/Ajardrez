@@ -2,7 +2,10 @@
 
 #include "board.hpp"
 
-class Eval {
-public:
-    static int evaluate(const Board& board);
-};
+namespace Ajardrez
+{
+        class Eval {
+    public:
+        static int evaluate(const Board& board);
+    };
+}

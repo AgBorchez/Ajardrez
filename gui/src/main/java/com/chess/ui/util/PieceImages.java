@@ -1,4 +1,4 @@
-package com.chess.ui;
+package com.chess.ui.util;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
