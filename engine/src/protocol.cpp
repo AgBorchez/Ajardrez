@@ -31,7 +31,15 @@ namespace Ajardrez
             auto moves = MoveGen::get_legal_moves(board, sq);
             std::string res = "MOVES ";
             for (size_t i = 0; i < moves.size(); ++i) {
-                res += to_string(moves[i].from) + to_string(moves[i].to);
+                std::string m_str = to_string(moves[i].from) + to_string(moves[i].to);
+                if (moves[i].type == MoveType::PROMOTION) {
+                    char p = 'q';
+                    if (moves[i].promotion_piece == PieceType::ROOK) p = 'r';
+                    else if (moves[i].promotion_piece == PieceType::BISHOP) p = 'b';
+                    else if (moves[i].promotion_piece == PieceType::KNIGHT) p = 'n';
+                    m_str += p;
+                }
+                res += m_str;
                 if (i + 1 < moves.size()) res += ",";
             }
             return res;
@@ -58,7 +66,9 @@ namespace Ajardrez
                 for (const auto& m : legals) {
                     if (m.to == to) {
                         selected_move = m;
-                        if (m.type == MoveType::PROMOTION) {
+                        selected_move.captured = board.get_piece(to);
+                        if (m.type == MoveType::PROMOTION || move_str.length() == 5) {
+                            selected_move.type = MoveType::PROMOTION;
                             selected_move.promotion_piece = promo;
                         }
                         break;
@@ -84,7 +94,15 @@ namespace Ajardrez
             int depth = 4;
             Move best = Search::find_best_move(board, depth);
             if (best.from != -1) {
-                return "BESTMOVE " + to_string(best.from) + to_string(best.to);
+                std::string move_str = to_string(best.from) + to_string(best.to);
+                if (best.type == MoveType::PROMOTION) {
+                    char p = 'q';
+                    if (best.promotion_piece == PieceType::ROOK) p = 'r';
+                    else if (best.promotion_piece == PieceType::BISHOP) p = 'b';
+                    else if (best.promotion_piece == PieceType::KNIGHT) p = 'n';
+                    move_str += p;
+                }
+                return "BESTMOVE " + move_str;
             }
             return "NOMOVE";
         }

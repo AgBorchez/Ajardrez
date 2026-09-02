@@ -29,14 +29,18 @@ namespace Ajardrez
     }
 
     void Board::make_move(const Move& move) {
-        
         history[history_index].move = move;
         history[history_index].castling = castling;
         history_index++;
-        squares[move.to] = squares[move.from];
+
+        if (move.promotion_piece != PieceType::NONE) {
+            squares[move.to] = Piece{move.promotion_piece, current_turn};
+        } else {
+            squares[move.to] = squares[move.from];
+        }
+
         squares[move.from] = Piece{PieceType::NONE, Color::NONE};
         current_turn = (current_turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
-        
     }
 
     bool Board::undo_move() {
@@ -46,11 +50,11 @@ namespace Ajardrez
 
         history_index--;
         Move last_move = history[history_index].move;
-
         castling = history[history_index].castling;
 
         Color moving_color = (current_turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
 
+        // 1. Restaurar la pieza que se movió (si fue coronación, vuelve a ser peón)
         if (last_move.type == MoveType::PROMOTION) {
             squares[last_move.from] = Piece{PieceType::PAWN, moving_color};
         } else {
@@ -58,6 +62,7 @@ namespace Ajardrez
         }
         squares[last_move.to] = last_move.captured;
 
+        // 2. Deshacer el movimiento de la torre si hubo enroque
         if (last_move.type == MoveType::CASTLE_KINGSIDE) {
             if (moving_color == Color::WHITE) {
                 squares[7] = squares[5]; squares[5] = Piece{};
@@ -72,7 +77,9 @@ namespace Ajardrez
             }
         }
 
+        // 3. Devolver el turno al bando que acaba de deshacer su jugada
         current_turn = moving_color;
+
         return true;
     }
 

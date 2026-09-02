@@ -10,7 +10,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public class GameWindow extends JFrame {
@@ -59,27 +61,40 @@ public class GameWindow extends JFrame {
     private void onSquareClicked(int r, int c) {
         if (session.isAiTurn) return;
 
-        char piece = boardView.getPieceAt(r, c);
-        boolean isOwnPiece = session.playerPlaysWhite ? Character.isUpperCase(piece) : Character.isLowerCase(piece);
         String clickedSq = "" + (char)('a' + c) + (8 - r);
 
+        // 1. Intentar realizar un movimiento si ya teníamos una pieza seleccionada
         if (session.selectedSquare != null) {
             String fromSq = "" + (char)('a' + session.selectedSquare.x) + (8 - session.selectedSquare.y);
-            String move = fromSq + clickedSq;
+            String baseMove = fromSq + clickedSq;
+            char movingPiece = boardView.getPieceAt(session.selectedSquare.y, session.selectedSquare.x);
 
-            if (session.currentLegalMoves.contains(move)) {
-                if (piece == 'P' && r == 0) {
-                    move += promptPromotion();
-                }
-                executePlayerMove(move);
+            boolean isWhitePromo = (movingPiece == 'P' && r == 0);
+            boolean isBlackPromo = (movingPiece == 'p' && r == 7);
+            String finalMove = baseMove;
+
+            if (isWhitePromo || isBlackPromo) {
+                finalMove += promptPromotion();
+            }
+
+            // Verificar legalidad
+            if (session.currentLegalMoves.contains(finalMove) || session.currentLegalMoves.contains(baseMove)) {
+                executePlayerMove(finalMove);
                 session.selectedSquare = null;
+                session.currentLegalMoves.clear();
                 boardView.clearHighlights();
                 boardView.render();
                 return;
             }
         }
 
-        if (piece != ' ' && isOwnPiece) {
+        // 2. Si no se ejecutó un movimiento, evaluar selección de la nueva casilla
+        char clickedPiece = boardView.getPieceAt(r, c);
+        boolean isOwnPiece = session.playerPlaysWhite 
+                ? Character.isUpperCase(clickedPiece) 
+                : Character.isLowerCase(clickedPiece);
+
+        if (clickedPiece != ' ' && isOwnPiece) {
             session.selectedSquare = new Point(c, r);
             boardView.setSelectedSquare(session.selectedSquare);
             try {
@@ -87,16 +102,20 @@ public class GameWindow extends JFrame {
                 session.currentLegalMoves.clear();
                 session.currentLegalMoves.addAll(moves);
 
-                java.util.Set<String> targets = new java.util.HashSet<>();
-                for (String m : moves) targets.add(m.substring(2, 4));
+                Set<String> targets = new HashSet<>();
+                for (String m : moves) {
+                    targets.add(m.substring(2, 4));
+                }
                 boardView.setHighlightedSquares(targets);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
             session.selectedSquare = null;
+            session.currentLegalMoves.clear();
             boardView.clearHighlights();
         }
+
         boardView.render();
     }
 
