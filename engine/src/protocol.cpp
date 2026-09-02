@@ -1,6 +1,7 @@
 #include "protocol.hpp"
 #include "movegen.hpp"
 #include "search.hpp"
+#include "logger.hpp"
 #include <iostream>
 #include <sstream>
 
@@ -12,6 +13,7 @@ namespace Ajardrez
 
     std::string Protocol::process_command(const std::string& line) {
         std::istringstream iss(line);
+        Logger::log("PROTOCOL", "Recibido: " + line);
         std::string command;
         iss >> command;
 
@@ -47,6 +49,7 @@ namespace Ajardrez
         else if (command == "MAKE_MOVE") {
             std::string move_str;
             iss >> move_str;
+            Logger::log("ENGINE", "Jugada aplicada: " + move_str);
             if (move_str.length() >= 4) {
                 int from = from_string(move_str.substr(0, 2));
                 int to = from_string(move_str.substr(2, 2));

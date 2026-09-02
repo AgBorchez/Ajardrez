@@ -5,6 +5,7 @@ import com.chess.ui.components.ChessBoardView;
 import com.chess.ui.components.buttons.GameActionButton;
 import com.chess.ui.components.buttons.NewGameButton;
 import com.chess.ui.components.buttons.UndoButton;
+import com.chess.ui.util.Logger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -63,11 +64,13 @@ public class GameWindow extends JFrame {
 
         String clickedSq = "" + (char)('a' + c) + (8 - r);
 
-        // 1. Intentar realizar un movimiento si ya teníamos una pieza seleccionada
+        Logger.info("UI", "Casilla seleccionada: " + clickedSq);
+
         if (session.selectedSquare != null) {
             String fromSq = "" + (char)('a' + session.selectedSquare.x) + (8 - session.selectedSquare.y);
             String baseMove = fromSq + clickedSq;
             char movingPiece = boardView.getPieceAt(session.selectedSquare.y, session.selectedSquare.x);
+            Logger.info("UI", "Ejecutando jugada: " + baseMove);
 
             boolean isWhitePromo = (movingPiece == 'P' && r == 0);
             boolean isBlackPromo = (movingPiece == 'p' && r == 7);
