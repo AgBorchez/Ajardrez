@@ -5,6 +5,7 @@ import com.chess.ui.components.ChessBoardView;
 import com.chess.ui.components.buttons.GameActionButton;
 import com.chess.ui.components.buttons.NewGameButton;
 import com.chess.ui.components.buttons.UndoButton;
+import com.chess.ui.util.Logger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -63,9 +64,12 @@ public class GameWindow extends JFrame {
         boolean isOwnPiece = session.playerPlaysWhite ? Character.isUpperCase(piece) : Character.isLowerCase(piece);
         String clickedSq = "" + (char)('a' + c) + (8 - r);
 
+        Logger.info("UI", "Casilla seleccionada: " + clickedSq);
+
         if (session.selectedSquare != null) {
             String fromSq = "" + (char)('a' + session.selectedSquare.x) + (8 - session.selectedSquare.y);
             String move = fromSq + clickedSq;
+            Logger.info("UI", "Ejecutando jugada: " + move);
 
             if (session.currentLegalMoves.contains(move)) {
                 if (piece == 'P' && r == 0) {

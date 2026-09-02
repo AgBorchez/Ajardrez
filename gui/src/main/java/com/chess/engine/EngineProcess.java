@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import com.chess.ui.util.Logger;
 
 public class EngineProcess implements AutoCloseable {
 
@@ -48,6 +49,8 @@ public class EngineProcess implements AutoCloseable {
     public synchronized String sendCommand(String command) throws IOException {
         ensureAlive();
 
+        Logger.info("IPC-OUT", "Comando enviado: " + command);
+
         writer.write(command);
         writer.newLine();
         writer.flush(); // Crucial: vacía el buffer para que C++ lo reciba al instante
@@ -56,6 +59,7 @@ public class EngineProcess implements AutoCloseable {
         if (response == null) {
             throw new IOException("El motor de C++ cerró el stream de comunicación inesperadamente.");
         }
+        Logger.info("IPC-IN", "Respuesta recibida: " + response);
         return response;
     }
 
