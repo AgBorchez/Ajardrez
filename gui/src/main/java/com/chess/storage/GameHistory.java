@@ -5,23 +5,23 @@ import java.util.Deque;
 
 public class GameHistory {
     private final Deque<String> moveHistory = new ArrayDeque<>();
-    private final Deque<String> redoHistory = new ArrayDeque<>();
+    private final Deque<String> undoHistory = new ArrayDeque<>();
 
     public void recordMove(String move) {
         moveHistory.push(move);
-        redoHistory.clear(); // Nuevo movimiento invalida el árbol de redo
+        undoHistory.clear(); // Nuevo movimiento invalida el árbol de movimientos previos
     }
 
     public String undo() {
         if (moveHistory.isEmpty()) return null;
         String move = moveHistory.pop();
-        redoHistory.push(move);
+        undoHistory.push(move);
         return move;
     }
 
     public String redo() {
-        if (redoHistory.isEmpty()) return null;
-        String move = redoHistory.pop();
+        if (undoHistory.isEmpty()) return null;
+        String move = undoHistory.pop();
         moveHistory.push(move);
         return move;
     }
@@ -30,9 +30,13 @@ public class GameHistory {
         return moveHistory;
     }
 
+    public Deque<String> getUndoHisory(){
+        return undoHistory;
+    } 
+
     public void clear() {
         moveHistory.clear();
-        redoHistory.clear();
+        undoHistory.clear();
     }
 
     public java.util.List<String> getMovesChronological() {
@@ -43,5 +47,7 @@ public class GameHistory {
         }
         return list;
     }
+
+    
 
 }

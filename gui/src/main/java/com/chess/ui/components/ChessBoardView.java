@@ -1,19 +1,24 @@
 package com.chess.ui.components;
 
+import com.chess.ui.util.PieceImages;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import com.chess.ui.util.PieceImages;
+import java.util.function.Consumer;
 
 public class ChessBoardView extends JPanel {
 
     private final JButton[][] buttons = new JButton[8][8];
     private final char[][] boardState = new char[8][8];
     private final Set<String> highlightedSquares = new HashSet<>();
+
+    private final Consumer<String> onSquareSelected; // Notifica "e2" para pedir jugadas legales
+    private final Consumer<String> onMoveAttempted;  // Notifica "e2e4" para ejecutar la jugada
+
     private Point selectedPoint = null;
     private boolean flipped = false;
 
@@ -22,29 +27,33 @@ public class ChessBoardView extends JPanel {
     private static final Color SELECTED_COLOR = new Color(186, 202, 68);
     private static final Color MOVE_HINT_COLOR = new Color(130, 151, 105);
 
-    public ChessBoardView(BiConsumer<Integer, Integer> onSquareClicked) {
+    public ChessBoardView(Consumer<String> onSquareSelected, Consumer<String> onMoveAttempted) {
+        this.onSquareSelected = onSquareSelected;
+        this.onMoveAttempted = onMoveAttempted;
+
         setLayout(new GridLayout(8, 8));
-        initButtons(onSquareClicked);
+
+        setPreferredSize(new Dimension(560, 560));
+        initButtons();
         resetState();
     }
 
-    private void initButtons(BiConsumer<Integer, Integer> onSquareClicked) {
+    private void initButtons() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 JButton btn = new JButton();
                 btn.setFont(new Font("SansSerif", Font.BOLD, 36));
                 btn.setFocusPainted(false);
                 btn.setBorderPainted(false);
-                
+
                 final int row = r;
                 final int col = c;
                 btn.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
-                        // Traducir la posición visual de la pantalla a la coordenada lógica (0 a 7)
                         int logicalRow = flipped ? (7 - row) : row;
                         int logicalCol = flipped ? (7 - col) : col;
-                        onSquareClicked.accept(logicalRow, logicalCol);
+                        handleSquareClick(logicalRow, logicalCol);
                     }
                 });
 
@@ -54,13 +63,75 @@ public class ChessBoardView extends JPanel {
         }
     }
 
-    public void setFlipped(boolean flipped) {
-        this.flipped = flipped;
+    private void handleSquareClick(int r, int c) {
+        String clickedSq = toNotation(r, c);
+
+        // 1. Si ya había una casilla seleccionada y se clickea una sugerencia válida
+        if (selectedPoint != null && highlightedSquares.contains(clickedSq)) {
+            String fromSq = toNotation(selectedPoint.y, selectedPoint.x);
+            char movingPiece = boardState[selectedPoint.y][selectedPoint.x];
+            String move = fromSq + clickedSq;
+
+            if ((movingPiece == 'P' && r == 0) || (movingPiece == 'p' && r == 7)) {
+                move += promptPromotion();
+            }
+
+            clearSelection();
+            render();
+            onMoveAttempted.accept(move); // Notifica la jugada completa a GameSession
+            return;
+        }
+
+        // 2. Si no es un destino legal, se evalúa seleccionar la casilla tocada
+        char piece = boardState[r][c];
+        if (piece != ' ') {
+            selectedPoint = new Point(c, r);
+            render();
+            onSquareSelected.accept(clickedSq); // Pide a GameSession las jugadas legales
+        } else {
+            clearSelection();
+            render();
+        }
+    }
+
+    private String promptPromotion() {
+        String[] options = {"Reina", "Torre", "Alfil", "Caballo"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Elegí la pieza para coronar:",
+                "Coronación",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        return switch (choice) {
+            case 1 -> "r";
+            case 2 -> "b";
+            case 3 -> "n";
+            default -> "q";
+        };
+    }
+
+    public void setLegalMoveTargets(Set<String> targets) {
+        this.highlightedSquares.clear();
+        if (targets != null) {
+            this.highlightedSquares.addAll(targets);
+        }
+        render();
+    }
+
+    public void clearSelection() {
+        this.selectedPoint = null;
+        this.highlightedSquares.clear();
     }
 
     public void resetState() {
         char[] backRankBlack = {'r','n','b','q','k','b','n','r'};
         char[] backRankWhite = {'R','N','B','Q','K','B','N','R'};
+
         for (int c = 0; c < 8; c++) {
             boardState[0][c] = backRankBlack[c];
             boardState[1][c] = 'p';
@@ -68,50 +139,24 @@ public class ChessBoardView extends JPanel {
             boardState[6][c] = 'P';
             boardState[7][c] = backRankWhite[c];
         }
-        clearHighlights();
+        clearSelection();
         render();
     }
 
-    public char getPieceAt(int r, int c) {
-        return boardState[r][c];
-    }
-
-    public void setPieceAt(int r, int c, char piece) {
-        boardState[r][c] = piece;
-    }
-
-    public void setSelectedSquare(Point p) {
-        this.selectedPoint = p;
-    }
-
-    public void setHighlightedSquares(Set<String> squares) {
-        this.highlightedSquares.clear();
-        if (squares != null) {
-            this.highlightedSquares.addAll(squares);
-        }
-    }
-
-    public void clearHighlights() {
-        this.selectedPoint = null;
-        this.highlightedSquares.clear();
-    }
-
     public void render() {
-        int targetSize = 58; 
+        int targetSize = 58;
 
         for (int visualRow = 0; visualRow < 8; visualRow++) {
             for (int visualCol = 0; visualCol < 8; visualCol++) {
-                // Mapeo lógico según orientación
                 int logicalRow = flipped ? (7 - visualRow) : visualRow;
                 int logicalCol = flipped ? (7 - visualCol) : visualCol;
 
                 char piece = boardState[logicalRow][logicalCol];
-
                 JButton btn = buttons[visualRow][visualCol];
+
                 btn.setText("");
                 btn.setIcon(PieceImages.getIcon(piece, targetSize));
 
-                // El patrón de colores del tablero sigue basándose en la posición lógica
                 Color baseColor = (logicalRow + logicalCol) % 2 == 0 ? LIGHT_SQUARE : DARK_SQUARE;
                 btn.setBackground(baseColor);
 
@@ -119,7 +164,7 @@ public class ChessBoardView extends JPanel {
                     btn.setBackground(SELECTED_COLOR);
                 }
 
-                String sq = "" + (char)('a' + logicalCol) + (8 - logicalRow);
+                String sq = toNotation(logicalRow, logicalCol);
                 if (highlightedSquares.contains(sq)) {
                     btn.setBackground(MOVE_HINT_COLOR);
                 }
@@ -137,13 +182,11 @@ public class ChessBoardView extends JPanel {
 
         char movingPiece = boardState[fromRow][fromCol];
 
-        // Coronación
         if (moveStr.length() == 5) {
             char promo = moveStr.charAt(4);
             movingPiece = Character.isUpperCase(movingPiece) ? Character.toUpperCase(promo) : Character.toLowerCase(promo);
         }
 
-        // Enroque visual
         if (Character.toUpperCase(movingPiece) == 'K' && Math.abs(toCol - fromCol) == 2) {
             if (toCol == 6) {
                 boardState[fromRow][5] = boardState[fromRow][7];
@@ -156,5 +199,13 @@ public class ChessBoardView extends JPanel {
 
         boardState[toRow][toCol] = movingPiece;
         boardState[fromRow][fromCol] = ' ';
+    }
+
+    public static String toNotation(int row, int col) {
+        return "" + (char)('a' + col) + (8 - row);
+    }
+
+    public void setFlipped(boolean flipped) {
+        this.flipped = flipped;
     }
 }

@@ -2,170 +2,159 @@ package com.chess.ui;
 
 import com.chess.engine.EngineBridge;
 import com.chess.ui.components.ChessBoardView;
-import com.chess.ui.components.buttons.GameActionButton;
-import com.chess.ui.components.buttons.NewGameButton;
-import com.chess.ui.components.buttons.UndoButton;
-import com.chess.ui.util.Logger;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 public class GameWindow extends JFrame {
 
     private final GameSession session;
     private final ChessBoardView boardView;
-    private final List<GameActionButton> actionButtons = new ArrayList<>();
+    private JButton undoButton;
+    private JButton redoButton;
 
     public GameWindow(EngineBridge bridge) {
         setTitle("Chess Engine");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(620, 680);
-        setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        this.boardView = new ChessBoardView(this::onSquareClicked);
-        this.session = new GameSession(bridge, boardView, this::updateUIState);
+        // 1. Instanciar la lógica pura
+        this.session = new GameSession(bridge);
 
+        // 2. Instanciar la vista pasiva conectando sus dos intenciones
+        this.boardView = new ChessBoardView(
+            this::handleSquareSelected,
+            this::handleMoveAttempted
+        );
+
+        // 3. Estructura visual
+        setJMenuBar(createMenuBar());
         add(boardView, BorderLayout.CENTER);
-        add(createToolbar(), BorderLayout.SOUTH);
+        add(createBottomBar(), BorderLayout.SOUTH);
 
+        pack();
+        setPreferredSize(new Dimension(560, 560));
+        setMinimumSize(new Dimension(300, 300));
+        setLocationRelativeTo(null);
+        setResizable(true);
+
+        startNewGame(true);
+    }
+
+    private void startNewGame(boolean playerPlaysWhite) {
+        session.startNewGame(playerPlaysWhite);
+        boardView.resetState();
+        boardView.setFlipped(!playerPlaysWhite);
+        boardView.render();
+
+        if (!playerPlaysWhite) {
+            requestAiMove();
+        }
         updateUIState();
     }
 
-    private JPanel createToolbar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+    // Evento 1: Usuario toca una casilla -> pedimos destinos a la sesión y resaltamos
+    private void handleSquareSelected(String sq) {
+        if (session.isAiTurn()) return;
 
-        NewGameButton btnNew = new NewGameButton(session);
-        UndoButton btnUndo = new UndoButton(session);
+        Set<String> targets = session.getLegalTargets(sq);
+        boardView.setLegalMoveTargets(targets);
+    }
 
-        actionButtons.add(btnNew);
-        actionButtons.add(btnUndo);
+    // Evento 2: Usuario completa una jugada -> aplicamos a la lógica, luego al tablero y pedimos respuesta IA
+    private void handleMoveAttempted(String uciMove) {
+        if (session.isAiTurn()) return;
 
-        bar.add(btnNew);
-        bar.add(btnUndo);
-        btnNew.executeAction();
-        return bar;
+        boolean success = session.playPlayerMove(uciMove);
+        if (success) {
+            boardView.applyMoveNotation(uciMove);
+            boardView.render();
+            updateUIState();
+
+            requestAiMove();
+        }
+    }
+
+    private void requestAiMove() {
+        updateUIState();
+        session.triggerAiMoveAsync(aiMove -> SwingUtilities.invokeLater(() -> {
+            if (aiMove != null && aiMove.length() >= 4) {
+                boardView.applyMoveNotation(aiMove);
+                boardView.render();
+            }
+            updateUIState();
+        }));
+    }
+
+    private void executeUndo() {
+        if (session.undo()) {
+            // Reconstruir la posición del tablero a partir del historial restante
+            boardView.resetState();
+            for (String pastMove : session.getMoveHistory()) {
+                boardView.applyMoveNotation(pastMove);
+            }
+            boardView.render();
+            updateUIState();
+        }
+    }
+
+    private void executeRedo() {
+        List<String> moves = session.redo();
+        if (!moves.isEmpty()) {
+            for (String move : moves) {
+                boardView.applyMoveNotation(move);
+            }
+            boardView.render();
+            updateUIState();
+        }
+    }
+
+    private JMenuBar createMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+
+        JMenu gameMenu = new JMenu("Partida");
+        JMenuItem newGameItem = new JMenuItem("Nueva Partida");
+        newGameItem.addActionListener(e -> startNewGame(true));
+        gameMenu.add(newGameItem);
+
+        JMenu optionsMenu = new JMenu("Opciones");
+        JMenuItem toggleThemeItem = new JMenuItem("Cambiar tema visual");
+        toggleThemeItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Opciones visuales en desarrollo."));
+        optionsMenu.add(toggleThemeItem);
+
+        menuBar.add(gameMenu);
+        menuBar.add(optionsMenu);
+
+        return menuBar;
+    }
+
+    private JPanel createBottomBar() {
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 8));
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(200, 200, 200)));
+
+        undoButton = new JButton("↶");
+        undoButton.setFont(new Font("SansSerif", Font.BOLD, 22));
+        undoButton.setFocusable(false);
+        undoButton.setToolTipText("Deshacer jugada");
+        undoButton.addActionListener(e -> executeUndo());
+
+        redoButton = new JButton("↷");
+        redoButton.setFont(new Font("SansSerif", Font.BOLD, 22));
+        redoButton.setFocusable(false);
+        redoButton.setToolTipText("Rehacer jugada");
+        redoButton.addActionListener(e -> executeRedo());
+
+        bottomPanel.add(undoButton);
+        bottomPanel.add(redoButton);
+
+        return bottomPanel;
     }
 
     private void updateUIState() {
-        for (GameActionButton btn : actionButtons) {
-            btn.updateState();
-        }
-    }
-
-    private void onSquareClicked(int r, int c) {
-        if (session.isAiTurn) return;
-
-        String clickedSq = "" + (char)('a' + c) + (8 - r);
-
-        Logger.info("UI", "Casilla seleccionada: " + clickedSq);
-
-        if (session.selectedSquare != null) {
-            String fromSq = "" + (char)('a' + session.selectedSquare.x) + (8 - session.selectedSquare.y);
-            String baseMove = fromSq + clickedSq;
-            char movingPiece = boardView.getPieceAt(session.selectedSquare.y, session.selectedSquare.x);
-            Logger.info("UI", "Ejecutando jugada: " + baseMove);
-
-            boolean isWhitePromo = (movingPiece == 'P' && r == 0);
-            boolean isBlackPromo = (movingPiece == 'p' && r == 7);
-            String finalMove = baseMove;
-
-            if (isWhitePromo || isBlackPromo) {
-                finalMove += promptPromotion();
-            }
-
-            // Verificar legalidad
-            if (session.currentLegalMoves.contains(finalMove) || session.currentLegalMoves.contains(baseMove)) {
-                executePlayerMove(finalMove);
-                session.selectedSquare = null;
-                session.currentLegalMoves.clear();
-                boardView.clearHighlights();
-                boardView.render();
-                return;
-            }
-        }
-
-        // 2. Si no se ejecutó un movimiento, evaluar selección de la nueva casilla
-        char clickedPiece = boardView.getPieceAt(r, c);
-        boolean isOwnPiece = session.playerPlaysWhite 
-                ? Character.isUpperCase(clickedPiece) 
-                : Character.isLowerCase(clickedPiece);
-
-        if (clickedPiece != ' ' && isOwnPiece) {
-            session.selectedSquare = new Point(c, r);
-            boardView.setSelectedSquare(session.selectedSquare);
-            try {
-                List<String> moves = session.bridge.getLegalMoves(clickedSq);
-                session.currentLegalMoves.clear();
-                session.currentLegalMoves.addAll(moves);
-
-                Set<String> targets = new HashSet<>();
-                for (String m : moves) {
-                    targets.add(m.substring(2, 4));
-                }
-                boardView.setHighlightedSquares(targets);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            session.selectedSquare = null;
-            session.currentLegalMoves.clear();
-            boardView.clearHighlights();
-        }
-
-        boardView.render();
-    }
-
-    private void executePlayerMove(String moveStr) {
-        try {
-            session.bridge.makeMove(moveStr);
-            session.history.recordMove(moveStr);
-            boardView.applyMoveNotation(moveStr);
-            boardView.render();
-
-            session.isAiTurn = true;
-            updateUIState();
-
-            CompletableFuture.supplyAsync(() -> {
-                try {
-                    return session.bridge.calculateAiMove();
-                } catch (IOException ex) {
-                    return null;
-                }
-            }).thenAccept(aiMove -> SwingUtilities.invokeLater(() -> {
-                session.isAiTurn = false;
-                if (aiMove != null && aiMove.length() >= 4) {
-                    try {
-                        session.bridge.makeMove(aiMove);
-                        session.history.recordMove(aiMove);
-                        boardView.applyMoveNotation(aiMove);
-                        boardView.render();
-                    } catch (IOException ignored) {}
-                }
-                updateUIState();
-            }));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private String promptPromotion() {
-        Object[] options = {"Dama (♕)", "Torre (♖)", "Alfil (♗)", "Caballo (♘)"};
-        int choice = JOptionPane.showOptionDialog(
-            this, "Coronar a:", "Promoción",
-            JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]
-        );
-        return switch (choice) {
-            case 1 -> "r";
-            case 2 -> "b";
-            case 3 -> "n";
-            default -> "q";
-        };
+        boolean canInteract = !session.isAiTurn();
+        undoButton.setEnabled(canInteract && session.canUndo());
+        redoButton.setEnabled(canInteract && session.canRedo());
     }
 }

@@ -2,26 +2,164 @@ package com.chess.ui;
 
 import com.chess.engine.EngineBridge;
 import com.chess.storage.GameHistory;
-import com.chess.ui.components.ChessBoardView;
 
-import java.awt.Point;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public class GameSession {
-    public final EngineBridge bridge;
-    public final GameHistory history = new GameHistory();
-    public final ChessBoardView boardView;
-    public final Runnable onStateChanged;
 
-    public Point selectedSquare = null;
-    public final Set<String> currentLegalMoves = new HashSet<>();
-    public boolean isAiTurn = false;
-    public boolean playerPlaysWhite = true;
+    private final EngineBridge bridge;
+    private final GameHistory history = new GameHistory();
+    private boolean isAiTurn = false;
+    private boolean playerPlaysWhite = true;
 
-    public GameSession(EngineBridge bridge, ChessBoardView boardView, Runnable onStateChanged) {
+    public GameSession(EngineBridge bridge) {
         this.bridge = bridge;
-        this.boardView = boardView;
-        this.onStateChanged = onStateChanged;
+    }
+
+    public void startNewGame(boolean playsWhite) {
+        try {
+            bridge.newGame();
+            history.clear();
+            this.playerPlaysWhite = playsWhite;
+            this.isAiTurn = !playsWhite;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Consulta movimientos legales al motor en C++
+    public Set<String> getLegalTargets(String sq) {
+        if (isAiTurn) return Collections.emptySet();
+
+        try {
+            List<String> moves = bridge.getLegalMoves(sq);
+            Set<String> targets = new HashSet<>();
+            for (String m : moves) {
+                targets.add(m.substring(2, 4));
+            }
+            return targets;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Collections.emptySet();
+        }
+    }
+
+    // Aplica la jugada del jugador en C++ y en el historial
+    public boolean playPlayerMove(String uciMove) {
+        if (isAiTurn) return false;
+
+        try {
+            bridge.makeMove(uciMove);
+            history.recordMove(uciMove);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Calcula la respuesta de la IA en background y notifica el resultado por callback
+    public void triggerAiMoveAsync(Consumer<String> onAiMoveCalculated) {
+        this.isAiTurn = true;
+
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return bridge.calculateAiMove();
+            } catch (IOException e) {
+                return null;
+            }
+        }).thenAccept(aiMove -> {
+            this.isAiTurn = false;
+            if (aiMove != null && aiMove.length() >= 4) {
+                try {
+                    bridge.makeMove(aiMove);
+                    history.recordMove(aiMove);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            onAiMoveCalculated.accept(aiMove);
+        });
+    }
+
+    // Deshace 2 jugadas en C++ e historial
+    public boolean undo() {
+        if (isAiTurn || !canUndo()) return false;
+
+        try {
+            for (int i = 0; i < 2; i++) {
+                String move = history.undo();
+                if (move != null) {
+                    bridge.undoMove();
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Rehace 2 jugadas en C++
+    public List<String> redo() {
+        if (isAiTurn || !canRedo()) return Collections.emptyList();
+
+        List<String> redoneMoves = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < 2; i++) {
+                String move = history.redo();
+                if (move != null) {
+                    bridge.makeMove(move);
+                    redoneMoves.add(move);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return redoneMoves;
+    }
+
+    public Deque<String> getMoveHistory() {
+        return history.getMoveHistory();
+    }
+
+    public boolean canUndo() {
+        
+        if (isAiTurn || history.getMoveHistory().isEmpty()) {
+            return false;
+        }
+
+        // Si el usuario juega con Negras, necesita al menos 2 jugadas en el historial (1 de IA + 1 propia)
+        if (!playerPlaysWhite && history.getMoveHistory().size() < 2) {
+            return false;
+        }
+
+        return true;
+
+    }
+
+    public boolean canRedo() {
+           
+        if (history.getUndoHisory().isEmpty()) {
+            return false;
+        }
+
+        return true;
+
+    }
+
+    public boolean isAiTurn() {
+        return isAiTurn;
+    }
+
+    public boolean isPlayerPlaysWhite() {
+        return playerPlaysWhite;
     }
 }
