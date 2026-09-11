@@ -2,6 +2,7 @@ package com.chess.ui;
 
 import com.chess.engine.EngineBridge;
 import com.chess.storage.GameHistory;
+import com.chess.ui.util.GameStateListener;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -11,16 +12,28 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.ArrayList;
 
 public class GameSession {
 
     private final EngineBridge bridge;
     private final GameHistory history = new GameHistory();
-    private boolean isAiTurn = false;
-    private boolean playerPlaysWhite = true;
+    protected final List<GameStateListener> listeners = new ArrayList<>();
+    private boolean isAiTurn;
+    private boolean playerPlaysWhite;
 
     public GameSession(EngineBridge bridge) {
         this.bridge = bridge;
+    }
+
+    public void addGameListener(GameStateListener listener){
+        this.listeners.add(listener);
+    }
+
+    public void notifyListeners(){
+        for (GameStateListener listener : listeners) {
+            listener.onGameStateChanged();            
+        }
     }
 
     public void startNewGame(boolean playsWhite) {
@@ -32,6 +45,7 @@ public class GameSession {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        notifyListeners();
     }
 
     // Consulta movimientos legales al motor en C++
@@ -44,11 +58,15 @@ public class GameSession {
             for (String m : moves) {
                 targets.add(m.substring(2, 4));
             }
+
+            notifyListeners();
             return targets;
+
         } catch (IOException e) {
             e.printStackTrace();
             return Collections.emptySet();
         }
+        
     }
 
     // Aplica la jugada del jugador en C++ y en el historial
@@ -58,9 +76,11 @@ public class GameSession {
         try {
             bridge.makeMove(uciMove);
             history.recordMove(uciMove);
+            notifyListeners();
             return true;
         } catch (IOException e) {
             e.printStackTrace();
+            notifyListeners();
             return false;
         }
     }
@@ -81,6 +101,7 @@ public class GameSession {
                 try {
                     bridge.makeMove(aiMove);
                     history.recordMove(aiMove);
+                    notifyListeners();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

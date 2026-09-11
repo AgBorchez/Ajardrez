@@ -2,7 +2,7 @@ package com.chess;
 
 import com.chess.engine.EngineBridge;
 import com.chess.engine.EngineProcess;
-import com.chess.ui.GameWindow;
+import com.chess.ui.view.GameWindow;
 
 import javax.swing.SwingUtilities;
 import java.nio.file.Path;

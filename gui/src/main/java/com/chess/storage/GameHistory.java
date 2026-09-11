@@ -1,7 +1,9 @@
 package com.chess.storage;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Deque;
+import java.util.Iterator;
 
 public class GameHistory {
     private final Deque<String> moveHistory = new ArrayDeque<>();
@@ -39,9 +41,9 @@ public class GameHistory {
         undoHistory.clear();
     }
 
-    public java.util.List<String> getMovesChronological() {
-        java.util.List<String> list = new java.util.ArrayList<>();
-        java.util.Iterator<String> it = moveHistory.descendingIterator();
+    public List<String> getMovesChronological() {
+        List<String> list = new java.util.ArrayList<>();
+        Iterator<String> it = moveHistory.descendingIterator();
         while (it.hasNext()) {
             list.add(it.next());
         }

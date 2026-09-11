@@ -20,9 +20,6 @@ public class EngineProcess implements AutoCloseable {
         this.binaryPath = binaryPath;
     }
 
-    /**
-     * Inicia el subproceso de C++ y conecta los streams de entrada/salida.
-     */
     public synchronized void start() throws IOException {
         File binary = new File(binaryPath);
         if (!binary.exists() || !binary.canExecute()) {
@@ -42,10 +39,7 @@ public class EngineProcess implements AutoCloseable {
             throw new IOException("Fallo en el handshake inicial con el motor C++. Respuesta: " + response);
         }
     }
-
-    /**
-     * Envía un comando de texto al motor y espera una única línea de respuesta.
-     */
+  
     public synchronized String sendCommand(String command) throws IOException {
         ensureAlive();
 
@@ -63,9 +57,6 @@ public class EngineProcess implements AutoCloseable {
         return response;
     }
 
-    /**
-     * Mecanismo 'salvavidas': si el subproceso murió, levanta uno nuevo en caliente.
-     */
     private void ensureAlive() throws IOException {
         if (process == null || !process.isAlive()) {
             System.err.println("[EngineProcess] Motor caído o no iniciado. Reiniciando...");

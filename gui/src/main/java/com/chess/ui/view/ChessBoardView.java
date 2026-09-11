@@ -1,9 +1,12 @@
-package com.chess.ui.components;
+package com.chess.ui.view;
 
-import com.chess.ui.util.PieceImages;
+import com.chess.ui.components.buttons.SquareButton;
+import com.chess.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
@@ -12,9 +15,10 @@ import java.util.function.Consumer;
 
 public class ChessBoardView extends JPanel {
 
-    private final JButton[][] buttons = new JButton[8][8];
+    private final SquareButton[][] squares = new SquareButton[8][8];
     private final char[][] boardState = new char[8][8];
     private final Set<String> highlightedSquares = new HashSet<>();
+    private final ThemeManager themeManager;
 
     private final Consumer<String> onSquareSelected; // Notifica "e2" para pedir jugadas legales
     private final Consumer<String> onMoveAttempted;  // Notifica "e2e4" para ejecutar la jugada
@@ -22,27 +26,46 @@ public class ChessBoardView extends JPanel {
     private Point selectedPoint = null;
     private boolean flipped = false;
 
-    private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
-    private static final Color DARK_SQUARE = new Color(181, 136, 99);
-    private static final Color SELECTED_COLOR = new Color(186, 202, 68);
-    private static final Color MOVE_HINT_COLOR = new Color(130, 151, 105);
+    private int currentTileSize = 1;
 
-    public ChessBoardView(Consumer<String> onSquareSelected, Consumer<String> onMoveAttempted) {
+    private Image selectedSquare;
+    private Image hintSquare;
+    private Image darkSquare;
+    private Image lightSquare;
+
+    
+
+    public ChessBoardView(Consumer<String> onSquareSelected, Consumer<String> onMoveAttempted, ThemeManager themeManager) {
         this.onSquareSelected = onSquareSelected;
         this.onMoveAttempted = onMoveAttempted;
+        this.themeManager = themeManager;
 
+        addComponentListener(new ComponentAdapter(){
+            @Override 
+            public void componentResized(ComponentEvent e){
+                updateTileScales();
+                render();
+            }
+        });
+        
         setLayout(new GridLayout(8, 8));
 
+        //prueba
+        
+
         setPreferredSize(new Dimension(560, 560));
+        updateTileScales();
         initButtons();
         resetState();
+        render();
     }
+    
 
     private void initButtons() {
+
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
-                JButton btn = new JButton();
-                btn.setFont(new Font("SansSerif", Font.BOLD, 36));
+                SquareButton btn = new SquareButton(lightSquare);
                 btn.setFocusPainted(false);
                 btn.setBorderPainted(false);
 
@@ -57,9 +80,28 @@ public class ChessBoardView extends JPanel {
                     }
                 });
 
-                buttons[r][c] = btn;
+                squares[r][c] = btn;
                 add(btn);
             }
+        }
+    }
+
+    private void updateTileScales() {
+        int boardSize = Math.min(getWidth(), getHeight());
+        if (boardSize <= 0) {
+            boardSize = Math.min(getPreferredSize().width, getPreferredSize().height);
+        }
+        
+        int newTileSize = boardSize / 8;
+        
+        // Solo reescalamos si el tamaño realmente cambió
+        if (newTileSize != currentTileSize) {
+            currentTileSize = newTileSize;
+
+            darkSquare = this.themeManager.getDarkSquare(currentTileSize);
+            selectedSquare = this.themeManager.getSelectedOverlay(currentTileSize);
+            hintSquare = this.themeManager.getValidMoveOverlay(currentTileSize);
+            lightSquare = this.themeManager.getLightSquare(currentTileSize);
         }
     }
 
@@ -140,11 +182,9 @@ public class ChessBoardView extends JPanel {
             boardState[7][c] = backRankWhite[c];
         }
         clearSelection();
-        render();
     }
 
     public void render() {
-        int targetSize = 58;
 
         for (int visualRow = 0; visualRow < 8; visualRow++) {
             for (int visualCol = 0; visualCol < 8; visualCol++) {
@@ -152,21 +192,21 @@ public class ChessBoardView extends JPanel {
                 int logicalCol = flipped ? (7 - visualCol) : visualCol;
 
                 char piece = boardState[logicalRow][logicalCol];
-                JButton btn = buttons[visualRow][visualCol];
+                SquareButton square = squares[visualRow][visualCol];
 
-                btn.setText("");
-                btn.setIcon(PieceImages.getIcon(piece, targetSize));
+                square.setText("");
+                square.setIcon(themeManager.getPieceImage(piece, currentTileSize));
 
-                Color baseColor = (logicalRow + logicalCol) % 2 == 0 ? LIGHT_SQUARE : DARK_SQUARE;
-                btn.setBackground(baseColor);
+                Image baseImage = (visualCol + visualRow) % 2 == 0 ? lightSquare : darkSquare;
+                square.setTexture(baseImage);
 
                 if (selectedPoint != null && selectedPoint.y == logicalRow && selectedPoint.x == logicalCol) {
-                    btn.setBackground(SELECTED_COLOR);
+                    square.setTexture(selectedSquare);
                 }
 
                 String sq = toNotation(logicalRow, logicalCol);
                 if (highlightedSquares.contains(sq)) {
-                    btn.setBackground(MOVE_HINT_COLOR);
+                    square.setTexture(hintSquare);
                 }
             }
         }
@@ -208,4 +248,6 @@ public class ChessBoardView extends JPanel {
     public void setFlipped(boolean flipped) {
         this.flipped = flipped;
     }
+
+    
 }

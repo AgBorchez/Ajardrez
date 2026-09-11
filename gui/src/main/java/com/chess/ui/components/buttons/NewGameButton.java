@@ -1,6 +1,7 @@
 package com.chess.ui.components.buttons;
 
 import com.chess.ui.GameSession;
+import com.chess.ui.view.ChessBoardView;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -8,8 +9,8 @@ import java.awt.Component;
 
 public class NewGameButton extends GameActionButton {
 
-    public NewGameButton(GameSession session, Runnable onActionExecuted) {
-        super("Nueva Partida", session, onActionExecuted);
+    public NewGameButton(GameSession session, ChessBoardView boardView, Runnable onActionExecuted) {
+        super("Nueva Partida", session, boardView);
     }
 
     @Override
@@ -20,10 +21,6 @@ public class NewGameButton extends GameActionButton {
         boolean playsWhite = promptPlayerColor(parent);
 
         session.startNewGame(playsWhite);
-
-        if (onActionExecuted != null) {
-            onActionExecuted.run();
-        }
     }
 
     @Override

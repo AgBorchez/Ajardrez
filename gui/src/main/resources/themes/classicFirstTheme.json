@@ -1,0 +1,27 @@
+{
+  "themeName": "Default",
+  "board": {
+    "lightSquare": "/assets/defaultTheme/Floor.png",
+    "darkSquare": "/assets/defaultTheme/DarkFloor.png"
+  },
+  "overlays": {
+    "selected": "/assets/defaultTheme/SelectedTile.png",
+    "validMove": "/assets/defaultTheme/TileHint.png",
+    "castling": "/assets/defaultTheme/CastlingTile.png",
+    "check": "/assets/defaultTheme/TileHint.png"
+  },
+  "pieces":{
+    "p": "/assets/defaultTheme/pieces/bP.png",
+    "n": "/assets/defaultTheme/pieces/bN.png",
+    "b": "/assets/defaultTheme/pieces/bB.png",            
+    "r": "/assets/defaultTheme/pieces/bR.png",
+    "q": "/assets/defaultTheme/pieces/bQ.png",
+    "k": "/assets/defaultTheme/pieces/bK.png",
+    "P": "/assets/defaultTheme/pieces/wP.png",
+    "N": "/assets/defaultTheme/pieces/wN.png",
+    "B": "/assets/defaultTheme/pieces/wB.png",
+    "R": "/assets/defaultTheme/pieces/wR.png",
+    "Q": "/assets/defaultTheme/pieces/wQ.png",
+    "K": "/assets/defaultTheme/pieces/wK.png"
+  }
+}

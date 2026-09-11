@@ -1,19 +1,21 @@
-package com.chess.ui;
+package com.chess.ui.view;
 
 import com.chess.engine.EngineBridge;
-import com.chess.ui.components.ChessBoardView;
+import com.chess.ui.GameSession;
+import com.chess.ui.components.buttons.*;
+import com.chess.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 import java.util.Set;
 
 public class GameWindow extends JFrame {
 
     private final GameSession session;
     private final ChessBoardView boardView;
-    private JButton undoButton;
-    private JButton redoButton;
+    private final JMenuBar topMenu;
+    private final JPanel bottomPanel;
+    private ThemeManager Actualtheme;
 
     public GameWindow(EngineBridge bridge) {
         setTitle("Chess Engine");
@@ -23,16 +25,20 @@ public class GameWindow extends JFrame {
         // 1. Instanciar la lógica pura
         this.session = new GameSession(bridge);
 
+        this.Actualtheme = new ThemeManager("/themes/classicFirstTheme.json");
         // 2. Instanciar la vista pasiva conectando sus dos intenciones
         this.boardView = new ChessBoardView(
             this::handleSquareSelected,
-            this::handleMoveAttempted
+            this::handleMoveAttempted,
+            Actualtheme          
         );
 
         // 3. Estructura visual
-        setJMenuBar(createMenuBar());
+        topMenu = createMenuBar();
+        setJMenuBar(topMenu);
         add(boardView, BorderLayout.CENTER);
-        add(createBottomBar(), BorderLayout.SOUTH);
+        bottomPanel = createBottomBar();
+        add(bottomPanel, BorderLayout.SOUTH);
 
         pack();
         setPreferredSize(new Dimension(560, 560));
@@ -52,7 +58,6 @@ public class GameWindow extends JFrame {
         if (!playerPlaysWhite) {
             requestAiMove();
         }
-        updateUIState();
     }
 
     // Evento 1: Usuario toca una casilla -> pedimos destinos a la sesión y resaltamos
@@ -71,44 +76,22 @@ public class GameWindow extends JFrame {
         if (success) {
             boardView.applyMoveNotation(uciMove);
             boardView.render();
-            updateUIState();
 
             requestAiMove();
         }
     }
 
     private void requestAiMove() {
-        updateUIState();
         session.triggerAiMoveAsync(aiMove -> SwingUtilities.invokeLater(() -> {
             if (aiMove != null && aiMove.length() >= 4) {
                 boardView.applyMoveNotation(aiMove);
                 boardView.render();
             }
-            updateUIState();
         }));
     }
 
-    private void executeUndo() {
-        if (session.undo()) {
-            // Reconstruir la posición del tablero a partir del historial restante
-            boardView.resetState();
-            for (String pastMove : session.getMoveHistory()) {
-                boardView.applyMoveNotation(pastMove);
-            }
-            boardView.render();
-            updateUIState();
-        }
-    }
-
-    private void executeRedo() {
-        List<String> moves = session.redo();
-        if (!moves.isEmpty()) {
-            for (String move : moves) {
-                boardView.applyMoveNotation(move);
-            }
-            boardView.render();
-            updateUIState();
-        }
+    private void setTheme(String Theme){
+        this.Actualtheme.loadTheme(Theme);
     }
 
     private JMenuBar createMenuBar() {
@@ -134,27 +117,12 @@ public class GameWindow extends JFrame {
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 8));
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(200, 200, 200)));
 
-        undoButton = new JButton("↶");
-        undoButton.setFont(new Font("SansSerif", Font.BOLD, 22));
-        undoButton.setFocusable(false);
-        undoButton.setToolTipText("Deshacer jugada");
-        undoButton.addActionListener(e -> executeUndo());
-
-        redoButton = new JButton("↷");
-        redoButton.setFont(new Font("SansSerif", Font.BOLD, 22));
-        redoButton.setFocusable(false);
-        redoButton.setToolTipText("Rehacer jugada");
-        redoButton.addActionListener(e -> executeRedo());
+        UndoButton undoButton = new UndoButton(this.session, this.boardView);
+        RedoButton redoButton = new RedoButton(this.session, this.boardView);
 
         bottomPanel.add(undoButton);
         bottomPanel.add(redoButton);
 
         return bottomPanel;
-    }
-
-    private void updateUIState() {
-        boolean canInteract = !session.isAiTurn();
-        undoButton.setEnabled(canInteract && session.canUndo());
-        redoButton.setEnabled(canInteract && session.canRedo());
     }
 }
